@@ -1,7 +1,7 @@
-###Update:七牛的SDK已经添加了对ALAsset的支持，不再需要使用此库。换了公司后暂时没有用到七牛，我也懒得更新了。。
+>Update: 七牛的SDK已经添加了对ALAsset的支持，不再需要使用此库。换了公司后暂时没有用到七牛，我也懒得更新了。。
 
-##**问题描述**
-七牛iOS SDK的上传API只有两个
+## 问题描述
+七牛 iOS SDK 的上传 API 只有两个
 ```objc
 @interface QNUploadManager : NSObject
 
@@ -19,7 +19,7 @@
 
 @end
 ```
-其中putFileXXX是针对文件上传的，这个方法内部是依赖NSFileManager来获取文件信息的
+其中 putFileXXX 是针对文件上传的，这个方法内部是依赖 NSFileManager 来获取文件信息的
 ```objc
 NSError *error = nil;
 NSDictionary *fileAttr = [[NSFileManager defaultManager] attributesOfItemAtPath:filePath error:&error];
@@ -28,15 +28,15 @@ NSNumber *fileSizeNumber = fileAttr[NSFileSize];
 UInt32 fileSize = [fileSizeNumber intValue];
 NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:&error];
 ```
-那么问题来了，对于[ALAsset][1]，即系统相册中的图片或视频，获取到的assetURL是类似于如下形式的：
+那么问题来了，对于 ALAsset，即系统相册中的图片或视频，获取到的 assetURL 是类似于如下形式的：
 ```sh
 assets-library://asset/asset.MOV?id=A16D4A3B-664E-4A75-90E8-37EA3F04FF2E&ext=MOV
 ```
-NSFileManager无法处理，因而无法正确获取文件大小等信息，更不用说上传了。
+NSFileManager 无法处理，因而无法正确获取文件大小等信息，更不用说上传了。
 
-##**解决方案**
-为便于说明，假定有ALAsset实例asset。
-首先，通过asset.defaultRepresentation.size能够获取到对应文件的大小。为QNUploadManager创建一个category，如下
+## 解决方案
+为便于说明，假定有 ALAsset 实例 asset。
+首先，通过 asset.defaultRepresentation.size 能够获取到对应文件的大小。为 QNUploadManager 创建一个 category，如下
 ```objc
 @interface QNUploadManager (ALAssetSupport)
 
@@ -76,15 +76,15 @@ NSFileManager无法处理，因而无法正确获取文件大小等信息，更�
 }
 ```
 
-从上面的代码可以看到，QNUploadManager实际上只是获取文件信息，做一些预处理，而真正的上传过程是由QNResumeUpload完成的。QNResumeUpload的初始化入参很多，需要注意的是data和size，一个简化版的initXXX如下
+从上面的代码可以看到，QNUploadManager 实际上只是获取文件信息，做一些预处理，而真正的上传过程是由 QNResumeUpload 完成的。QNResumeUpload 的初始化入参很多，需要注意的是 data 和 size，一个简化版的 initXXX 如下
 ```objc
 - (instancetype)initWithData:(NSData *)data
                     withSize:(UInt32)size
                      withOtherParameters:(XXX *)XXX;
 ```
-其中data是文件句柄打开后的二进制数据，size是数据长度。
-你一定已经发现我在putALassetXXX里很弱智地在data这个入参上传入了nil，这是有原因的。
-打开QNResumeUpload.m，搜索data后发现，data本身只在2个获取分块数据的方法里涉及到
+其中data是文件句柄打开后的二进制数据，size是 数据长度。
+你一定已经发现我在 putALassetXXX 里很弱智地在 data 这个入参上传入了 nil，这是有原因的。
+打开 QNResumeUpload.m，搜索data后发现，data 本身只在 2 个获取分块数据的方法里涉及到
 ```objc
 - (void)makeBlock:(NSString *)uphost
            offset:(UInt32)offset
@@ -101,8 +101,8 @@ NSFileManager无法处理，因而无法正确获取文件大小等信息，更�
         complete:(QNCompleteBlock)complete; 
 }
 ```
-只要override它们，让它们支持ALAsset即可。
-首先为QNResumeUpload添加property
+只要 override 它们，让它们支持 ALAsset 即可。
+首先为 QNResumeUpload 添加 property
 ```objc
 @class ALAsset;
 
@@ -111,8 +111,8 @@ NSFileManager无法处理，因而无法正确获取文件大小等信息，更�
 
 @end
 ```
-在putALasset方法里会为此属性赋值。
-接着写一个获取指定offset和length的data的方法
+在 putALasset 方法里会为此属性赋值。
+接着写一个获取指定 offset 和 length 的 data 的方法
 ```objc
 - (NSData *)dataFromALAssetAtOffset:(NSInteger)offset size:(NSInteger)size
 {
@@ -123,7 +123,7 @@ NSFileManager无法处理，因而无法正确获取文件大小等信息，更�
     return [NSData dataWithBytesNoCopy:buffer length:buffered freeWhenDone:YES];
 }
 ```
-最后在makeBlock和putChunk里调用此方法即可，以makeBlock为例
+最后在 makeBlock 和 putChunk 里调用此方法即可，以 makeBlock 为例
 ```objc
 - (void)makeBlock:(NSString *)uphost
            offset:(UInt32)offset
